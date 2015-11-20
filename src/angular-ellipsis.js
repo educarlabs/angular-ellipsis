@@ -84,76 +84,73 @@ angular.module('dibari.angular-ellipsis', [])
 					return element.parent()[0].clientHeight - heightOfChildren;
 				}
 
-				function buildEllipsis() {
-					var binding = scope.ngBind || scope.ngBindHtml;
-					var isTrustedHTML = false;
-					if($sce.isEnabled() && angular.isObject(binding) && $sce.getTrustedHtml(binding)) {
-						isTrustedHTML = true;
-						binding = $sce.getTrustedHtml(binding);
-					}
-					if (binding) {
-						var isHtml = (!(!!scope.ngBind) && !!(scope.ngBindHtml));
-						var i = 0,
-							ellipsisSymbol = (typeof(attributes.ellipsisSymbol) !== 'undefined') ? attributes.ellipsisSymbol : '&hellip;',
-							ellipsisSeparator = (typeof(scope.ellipsisSeparator) !== 'undefined') ? attributes.ellipsisSeparator : ' ',
-							ellipsisSeparatorReg = (typeof(scope.ellipsisSeparatorReg) !== 'undefined') ? scope.ellipsisSeparatorReg : false,
-							appendString = (typeof(scope.ellipsisAppend) !== 'undefined' && scope.ellipsisAppend !== '') ? ellipsisSymbol + '<span>' + scope.ellipsisAppend + '</span>' : ellipsisSymbol,
-							bindArray = ellipsisSeparatorReg ? binding.match(ellipsisSeparatorReg) : binding.split(ellipsisSeparator);
+                                
+                                // Improvements from @tangentlin
+                                // @see:  https://github.com/dibari/angular-ellipsis/issues/9#issuecomment-155607982 
+                                var domElement = element[0];
 
-						attributes.isTruncated = false;
-						if (isHtml) {
-							element.html(binding);
-						} else {
-							element.text(binding);
-						}
-
-						// If text has overflow
-						if (isOverflowed(element, scope.useParent)) {
-							var bindArrayStartingLength = bindArray.length,
-								initialMaxHeight = scope.useParent ? getParentHeight(element) : element[0].clientHeight;
-
-							if (isHtml) {
-								element.html(binding + appendString);
-							} else {
-								element.text(binding).html(element.html() + appendString);
-							}
-							//Set data-overflow on element for targeting
-							element.attr('data-overflowed', 'true');
-
-							// Set complete text and remove one word at a time, until there is no overflow
-							for (; i < bindArrayStartingLength; i++) {
-								bindArray.pop();
-
-								if (isHtml) {
-									element.html(bindArray.join(ellipsisSeparator) + appendString);
-								} else {
-									element.text(bindArray.join(ellipsisSeparator)).html(element.html() + appendString);
-								}
-
-								if ((scope.useParent ? element.parent()[0] : element[0]).scrollHeight < initialMaxHeight || isOverflowed(element, scope.useParent) === false) {
-									attributes.isTruncated = true;
-									break;
-								}
-							}
-
-							// If append string was passed and append click function included
-							if (ellipsisSymbol != appendString && typeof(scope.ellipsisAppendClick) !== 'undefined' && scope.ellipsisAppendClick !== '') {
-								element.find('span').bind("click", function(e) {
-									scope.$apply(function() {
-										scope.ellipsisAppendClick.call(scope, {
-											event: e
-										});
-									});
-								});
-							}
-
-							if(!isTrustedHTML && $sce.isEnabled())
-							{
-								$sce.trustAsHtml(binding);
-							}
-						}
-					}
-				}
+                                function getEmptySpaceLocations(text) {
+                                    var spaceIndices = [];
+                                    var re = /\s+/gm;
+                                    var match;
+                                    while ((match = re.exec(text)) != null) {
+                                        spaceIndices.push(match.index);
+                                    }
+                                    return spaceIndices;
+                                }
+                                function getSubText(fullText, spaceIndices, index) {
+                                    return fullText.substr(0, spaceIndices[index]);
+                                }
+                                function isSubTextOverflow(fullText, spaceIndices, index, appendString) {
+                                    var text = getSubText(fullText, spaceIndices, index);
+                                    domElement.innerHTML = text + appendString;
+                                    return isOverflown(element);
+                                }
+                                function buildEllipsis() {
+                                    if (typeof (scope.ngBind) !== 'undefined') {
+                                        var text = scope.ngBind;
+                                        var spaceIndices = getEmptySpaceLocations(text);
+                                        attributes.isTruncated = false;
+                                        element.html(text);
+                                        var desiredHeight = element[0].clientHeight;
+                                        var actualHeight = element[0].scrollHeight;
+                                        if (actualHeight > desiredHeight) {
+                                            var totalSpaceLocations = spaceIndices.length;
+                                            var begin = 0;
+                                            var end = totalSpaceLocations - 1;
+                                            var lastOverflown = true;
+                                            var currentIndex;
+                                            var currentOverflown = true;
+                                            var notFound = true;
+                                            var seekedTimes = 0;
+                                            var ellipsisSymbol = (typeof (attributes.ellipsisSymbol) !== 'undefined') ? attributes.ellipsisSymbol : '&hellip;';
+                                            var appendString = (typeof (scope.ellipsisAppend) !== 'undefined' && scope.ellipsisAppend !== '') ? ellipsisSymbol + '<span>' + scope.ellipsisAppend + '</span>' : ellipsisSymbol;
+                                            while (notFound) {
+                                                currentIndex = begin + ((end - begin) >> 1);
+                                                currentOverflown = isSubTextOverflow(text, spaceIndices, currentIndex, appendString);
+                                                seekedTimes++;
+                                                if ((currentOverflown != lastOverflown) && (end - begin) == 1) {
+                                                    notFound = false;
+                                                }
+                                                else {
+                                                    if (currentOverflown) {
+                                                        end = currentIndex;
+                                                    }
+                                                    else {
+                                                        begin = currentIndex;
+                                                    }
+                                                }
+                                            }
+                                            var truncatedText = getSubText(text, spaceIndices, currentIndex) + appendString;
+                                            element.html(truncatedText);
+                                            attributes.isTruncated = true;
+                                            console.log('Seeked: ' + seekedTimes + ' Spaces: ' + totalSpaceLocations + ' Length: ' + text.length);
+                                        }
+                                    }
+                                }
+                                function isOverflown(thisElement) {
+                                    return thisElement[0].scrollHeight > thisElement[0].clientHeight;
+                                }
 
 				/**
 				 *	Test if element has overflow of text beyond height or max-height
