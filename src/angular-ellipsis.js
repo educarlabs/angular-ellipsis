@@ -144,7 +144,8 @@ angular.module('dibari.angular-ellipsis', [])
                                             var truncatedText = getSubText(text, spaceIndices, currentIndex) + appendString;
                                             element.html(truncatedText);
                                             attributes.isTruncated = true;
-                                            console.log('Seeked: ' + seekedTimes + ' Spaces: ' + totalSpaceLocations + ' Length: ' + text.length);
+                                            //Debug:
+                                            //console.log('Seeked: ' + seekedTimes + ' Spaces: ' + totalSpaceLocations + ' Length: ' + text.length);
                                         }
                                     }
                                 }
