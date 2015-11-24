@@ -114,8 +114,8 @@ angular.module('dibari.angular-ellipsis', [])
                                         element.html(text);
                                         var desiredHeight = element[0].clientHeight;
                                         var actualHeight = element[0].scrollHeight;
-                                        if (actualHeight > desiredHeight) {
-                                            var totalSpaceLocations = spaceIndices.length;
+                                        var totalSpaceLocations = spaceIndices.length;
+                                        if (actualHeight > desiredHeight && totalSpaceLocations >0) {                                            
                                             var begin = 0;
                                             var end = totalSpaceLocations - 1;
                                             var lastOverflown = true;
