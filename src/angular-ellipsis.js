@@ -129,7 +129,7 @@ angular.module('dibari.angular-ellipsis', [])
                                                 currentIndex = begin + ((end - begin) >> 1);
                                                 currentOverflown = isSubTextOverflow(text, spaceIndices, currentIndex, appendString);
                                                 seekedTimes++;
-                                                if ((currentOverflown != lastOverflown) && (end - begin) == 1) {
+                                                if ((currentOverflown != lastOverflown) || (end - begin) == 1) {
                                                     notFound = false;
                                                 }
                                                 else {
